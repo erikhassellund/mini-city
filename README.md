@@ -36,6 +36,17 @@ npx serve -l 8080 .
 | `F` | Lämna fordonet |
 | `Esc` | Pausmeny |
 
+### Mobil / surfplatta (lgäget rekommenderas)
+
+- Virtuell joystick (nedre vänster): rörelse till fots, gas/broms/styrning i bil
+- Dra på skärmen: rotera kameran
+- Knappar (nedre höger): Hopp, Spring, E 🚗 (in/ur fordon), ⛶ (helskärm), ⏸ (paus)
+- Pekkontrollerna visas automatiskt på pekskärmar; ingen keyboard eller mus behövs
+
+### Köra på mobilen utan lokal server
+
+Repot kan servas via **GitHub Pages**; öppna sedan Pages-URL:en direkt i mobile webbläsaren (Chrome/Samsung Internet på t.ex. Samsung S24 Ultra fungerar).
+
 ## Vad som finns i V1
 
 - Startmeny, inställningar (grafiknivå), pausmeny, lokalt sparande
@@ -59,8 +70,9 @@ Multiplayer-knappen är därför avstängd i menyn.
 ## Nästa steg (plan)
 
 1. Migrera till TypeScript + Vite + modulstruktur (core/world/entities/systems/ui/net).
-2. Byt egen fysik mot Rapier 3D.
-3. Asset-pipeline: riktiga modeller, texturer, ljud.
+2. Gamepad-stöd och finlir av pekkontroller.
+3. Byt egen fysik mot Rapier 3D.
+4. Asset-pipeline: riktiga modeller, texturer, ljud.
 4. Därefter: backend (Node/Postgres/Redis), multiplayer, drift.
 
 ## Teknisk status

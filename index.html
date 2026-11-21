@@ -2,7 +2,7 @@
 <html lang="sv">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <title>MINI CITY</title>
   <style>
     :root {
@@ -26,7 +26,85 @@
       font-family: "Segoe UI", Arial, sans-serif;
     }
 
-    #app canvas { display: block; }
+    #app canvas { display: block; touch-action: none; }
+
+    #touchControls {
+      position: fixed;
+      inset: 0;
+      z-index: 25;
+      pointer-events: none;
+      display: none;
+      touch-action: none;
+    }
+
+    #touchControls.active { display: block; }
+
+    #joystickZone {
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      width: 46%;
+      height: 48%;
+      pointer-events: auto;
+      touch-action: none;
+    }
+
+    #joyBase {
+      position: absolute;
+      left: 34px;
+      bottom: 38px;
+      width: 118px;
+      height: 118px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.25);
+      background: rgba(10, 16, 28, 0.45);
+      backdrop-filter: blur(4px);
+    }
+
+    #joyStick {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 52px;
+      height: 52px;
+      margin: -26px 0 0 -26px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, rgba(255,255,255,0.55), rgba(120,160,255,0.35));
+      border: 1px solid rgba(255, 255, 255, 0.4);
+    }
+
+    #btnCluster {
+      position: absolute;
+      right: 16px;
+      bottom: 22px;
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+      pointer-events: auto;
+      touch-action: none;
+    }
+
+    .touchBtn {
+      width: 62px;
+      height: 62px;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      background: rgba(10, 16, 28, 0.6);
+      color: var(--text);
+      font-size: 14px;
+      backdrop-filter: blur(4px);
+      user-select: none;
+      -webkit-user-select: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0;
+      padding: 0;
+    }
+
+    .touchBtn:active { filter: brightness(1.4); }
+
+    .touchBtn.small { width: 50px; height: 50px; font-size: 16px; }
 
     .hidden { display: none !important; }
 
@@ -291,6 +369,19 @@
     W A S D rörelse/körning • Shift spring • Space hopp • E gå in i fordon • F lämna fordon • Esc paus
   </div>
 
+  <div id="touchControls">
+    <div id="joystickZone">
+      <div id="joyBase"><div id="joyStick"></div></div>
+    </div>
+    <div id="btnCluster">
+      <button class="touchBtn small" id="pauseBtn">⏸</button>
+      <button class="touchBtn small" id="fsBtn">⛶</button>
+      <button class="touchBtn small" id="sprintBtn">Spring</button>
+      <button class="touchBtn" id="jumpBtn">Hopp</button>
+      <button class="touchBtn" id="vehicleBtn">E 🚗</button>
+    </div>
+  </div>
+
   <div id="message" class="hidden"></div>
 
   <script type="module">
@@ -317,6 +408,8 @@
     let cameraPitch = 0.24;
 
     const keys = {};
+    const isTouch = "ontouchstart" in window || (navigator.maxTouchPoints || 0) > 0;
+    const touchInput = { moveX: 0, moveY: 0, sprint: false };
     const colliders = [];
     const roadsData = [];
     const vehicles = [];
@@ -408,15 +501,24 @@
       $("controlsHint").classList.remove("hidden");
       $("pauseMenu").classList.add("hidden");
 
-      requestPointerLock();
-      showMessage("Välkommen till MINI CITY. Hitta en bil, gå nära den och tryck E.", 4200);
+      if (isTouch) {
+        $("touchControls").classList.add("active");
+        showMessage("Välkommen till MINI CITY! Joystick: rörelse/körning. Dra på skärmen: kamera. Knappen till höger: gå in i/ur bil.", 5200);
+      } else {
+        requestPointerLock();
+        showMessage("Välkommen till MINI CITY. Hitta en bil, gå nära den och tryck E.", 4200);
+      }
     }
 
     function openPause() {
       if (!gameStarted || paused) return;
       paused = true;
       $("pauseMenu").classList.remove("hidden");
+      $("touchControls").classList.remove("active");
       document.exitPointerLock?.();
+      Object.keys(keys).forEach((k) => (keys[k] = false));
+      touchInput.moveX = 0;
+      touchInput.moveY = 0;
     }
 
     function resumeGame() {
@@ -424,7 +526,8 @@
       paused = false;
       $("pauseMenu").classList.add("hidden");
       $("settingsMenu").classList.add("hidden");
-      requestPointerLock();
+      if (isTouch) $("touchControls").classList.add("active");
+      else requestPointerLock();
     }
 
     function quitToMenu() {
@@ -434,6 +537,7 @@
 
       document.exitPointerLock?.();
 
+      $("touchControls").classList.remove("active");
       $("pauseMenu").classList.add("hidden");
       $("settingsMenu").classList.add("hidden");
       $("hud").classList.add("hidden");
@@ -797,7 +901,11 @@
       if (keys["KeyD"]) move.add(right);
       if (keys["KeyA"]) move.sub(right);
 
-      const speed = keys["ShiftLeft"] || keys["ShiftRight"] ? 8.2 : 4.2;
+      move.addScaledVector(forward, touchInput.moveY);
+      move.addScaledVector(right, touchInput.moveX);
+
+      const speed =
+        keys["ShiftLeft"] || keys["ShiftRight"] || touchInput.sprint ? 8.2 : 4.2;
 
       if (move.lengthSq() > 0) {
         move.normalize();
@@ -1010,9 +1118,13 @@
       const v = state.inVehicle;
       if (!v) return;
 
-      const throttle = keys["KeyW"] ? 1 : 0;
-      const brake = keys["KeyS"] ? 1 : 0;
-      const steerInput = (keys["KeyA"] ? 1 : 0) - (keys["KeyD"] ? 1 : 0);
+      const throttle = (keys["KeyW"] ? 1 : 0) + Math.max(0, touchInput.moveY);
+      const brake = (keys["KeyS"] ? 1 : 0) + Math.max(0, -touchInput.moveY);
+      const steerInput = THREE.MathUtils.clamp(
+        (keys["KeyA"] ? 1 : 0) - (keys["KeyD"] ? 1 : 0) + touchInput.moveX,
+        -1,
+        1
+      );
 
       driveVehicle(v, dt, throttle, brake, steerInput, v.police ? 34 : 26);
     }
@@ -1376,11 +1488,11 @@
       });
 
       renderer.domElement.addEventListener("click", () => {
-        if (gameStarted && !paused) requestPointerLock();
+        if (!isTouch && gameStarted && !paused) requestPointerLock();
       });
 
       document.addEventListener("pointerlockchange", () => {
-        if (gameStarted && !paused && !document.pointerLockElement) openPause();
+        if (!isTouch && gameStarted && !paused && !document.pointerLockElement) openPause();
       });
 
       document.addEventListener("mousemove", (e) => {
@@ -1388,6 +1500,123 @@
         cameraYaw -= e.movementX * 0.0024;
         cameraPitch = THREE.MathUtils.clamp(cameraPitch + e.movementY * 0.0018, 0.02, 0.9);
       });
+
+      if (isTouch) setupTouchControls();
+    }
+
+    function setupTouchControls() {
+      $("controlsHint").textContent =
+        "Joystick: rörelse/körning • Dra på skärmen: kamera • E 🚗: gå in/ur bil • ⏸: paus";
+
+      let cameraPointer = null;
+      let lastX = 0;
+      let lastY = 0;
+
+      renderer.domElement.addEventListener("pointerdown", (e) => {
+        if (cameraPointer !== null) return;
+        cameraPointer = e.pointerId;
+        lastX = e.clientX;
+        lastY = e.clientY;
+      });
+
+      renderer.domElement.addEventListener("pointermove", (e) => {
+        if (e.pointerId !== cameraPointer) return;
+        cameraYaw -= (e.clientX - lastX) * 0.0045;
+        cameraPitch = THREE.MathUtils.clamp(
+          cameraPitch + (e.clientY - lastY) * 0.003,
+          0.02,
+          0.9
+        );
+        lastX = e.clientX;
+        lastY = e.clientY;
+      });
+
+      const endCameraPointer = (e) => {
+        if (e.pointerId === cameraPointer) cameraPointer = null;
+      };
+      renderer.domElement.addEventListener("pointerup", endCameraPointer);
+      renderer.domElement.addEventListener("pointercancel", endCameraPointer);
+
+      const zone = $("joystickZone");
+      const base = $("joyBase");
+      const stick = $("joyStick");
+      let joyPointer = null;
+
+      function updateJoystick(e) {
+        const rect = base.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        const radius = rect.width / 2;
+
+        let dx = (e.clientX - cx) / radius;
+        let dy = (e.clientY - cy) / radius;
+        const len = Math.hypot(dx, dy);
+        if (len > 1) {
+          dx /= len;
+          dy /= len;
+        }
+
+        touchInput.moveX = dx;
+        touchInput.moveY = -dy;
+        stick.style.transform = `translate(${dx * radius * 0.55}px, ${dy * radius * 0.55}px)`;
+      }
+
+      zone.addEventListener("pointerdown", (e) => {
+        joyPointer = e.pointerId;
+        zone.setPointerCapture(e.pointerId);
+        updateJoystick(e);
+      });
+
+      zone.addEventListener("pointermove", (e) => {
+        if (e.pointerId !== joyPointer) return;
+        updateJoystick(e);
+      });
+
+      const endJoystick = (e) => {
+        if (e.pointerId !== joyPointer) return;
+        joyPointer = null;
+        touchInput.moveX = 0;
+        touchInput.moveY = 0;
+        stick.style.transform = "";
+      };
+      zone.addEventListener("pointerup", endJoystick);
+      zone.addEventListener("pointercancel", endJoystick);
+
+      const hold = (el, code) => {
+        el.addEventListener("pointerdown", (e) => {
+          e.preventDefault();
+          keys[code] = true;
+        });
+        const release = () => (keys[code] = false);
+        el.addEventListener("pointerup", release);
+        el.addEventListener("pointercancel", release);
+        el.addEventListener("pointerleave", release);
+      };
+
+      hold($("jumpBtn"), "Space");
+      hold($("sprintBtn"), "ShiftLeft");
+
+      $("vehicleBtn").addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+        if (!gameStarted || paused) return;
+        if (state.inVehicle) exitVehicle();
+        else tryEnterNearestVehicle();
+      });
+
+      $("pauseBtn").addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+        openPause();
+      });
+
+      $("fsBtn").addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen?.().catch(() => {});
+        } else {
+          document.exitFullscreen?.();
+        }
+      });
+
     }
 
     function bindUI() {
