@@ -1,0 +1,1450 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MINI CITY</title>
+  <style>
+    :root {
+      --panel: rgba(10, 16, 28, 0.82);
+      --border: rgba(120, 160, 255, 0.18);
+      --text: #eef4ff;
+      --muted: #a8b8d8;
+      --accent: #ffb300;
+      --danger: #ff4d4f;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #07101d;
+      color: var(--text);
+      font-family: "Segoe UI", Arial, sans-serif;
+    }
+
+    #app canvas { display: block; }
+
+    .hidden { display: none !important; }
+
+    #menu,
+    .overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 40;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(255, 179, 0, 0.14), transparent 32%),
+        radial-gradient(circle at 80% 30%, rgba(70, 130, 255, 0.16), transparent 30%),
+        linear-gradient(135deg, rgba(4, 9, 20, 0.92), rgba(9, 18, 38, 0.96));
+      backdrop-filter: blur(8px);
+    }
+
+    .panel {
+      width: min(92vw, 460px);
+      padding: 28px;
+      border-radius: 22px;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+      text-align: center;
+    }
+
+    .panel h1 {
+      margin: 0 0 6px;
+      font-size: 62px;
+      letter-spacing: 8px;
+      color: var(--accent);
+      text-shadow: 0 0 30px rgba(255, 179, 0, 0.22);
+    }
+
+    .panel h2 {
+      margin: 0 0 18px;
+      font-size: 32px;
+    }
+
+    .sub {
+      margin-bottom: 22px;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    button {
+      width: 100%;
+      margin: 8px 0;
+      padding: 13px 16px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.05));
+      color: var(--text);
+      font-size: 16px;
+      cursor: pointer;
+      transition: transform 0.12s ease, filter 0.12s ease;
+    }
+
+    button:hover:not(:disabled) {
+      filter: brightness(1.16);
+      transform: translateY(-1px);
+    }
+
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .fine {
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    label {
+      display: block;
+      text-align: left;
+      margin: 12px 0 6px;
+      color: var(--muted);
+    }
+
+    select {
+      width: 100%;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: #0d1526;
+      color: var(--text);
+      margin-bottom: 14px;
+    }
+
+    #hud {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 20;
+    }
+
+    .stat {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 8px 12px;
+      backdrop-filter: blur(8px);
+    }
+
+    #topLeft {
+      position: fixed;
+      top: 14px;
+      left: 14px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    #healthBar {
+      width: 140px;
+      height: 10px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    #healthFill {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, #ff5f6d, #ffc371);
+    }
+
+    #minimapWrap {
+      position: fixed;
+      top: 14px;
+      right: 14px;
+      padding: 8px;
+    }
+
+    #minimap {
+      width: 180px;
+      height: 180px;
+      display: block;
+      border-radius: 12px;
+    }
+
+    #bottomLeft {
+      position: fixed;
+      left: 14px;
+      bottom: 14px;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    #controlsHint {
+      position: fixed;
+      bottom: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 20;
+      color: var(--muted);
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-size: 13px;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    #message {
+      position: fixed;
+      top: 72px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 50;
+      background: rgba(5, 10, 20, 0.88);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px 18px;
+      max-width: min(90vw, 700px);
+      text-align: center;
+      box-shadow: 0 18px 60px rgba(0,0,0,0.35);
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <div id="menu">
+    <div class="panel">
+      <h1>MINI CITY</h1>
+      <div class="sub">
+        San Francisco-inspirerad open world-prototyp.<br />
+        Version 1: singleplayer, körbar karaktär, bilar, NPC:er och enkel polisjakt.
+      </div>
+
+      <button id="btnSingle">Singleplayer</button>
+      <button id="btnMulti" disabled>Multiplayer (kommande)</button>
+      <button id="btnSettings">Inställningar</button>
+      <button id="btnQuit">Avsluta</button>
+
+      <div class="fine">
+        Multiplayer är inte implementerat i denna prototyp.<br />
+        Styr med WASD, håll musknapp/pointer lock aktivt, E för att gå in i bil, F för att lämna.
+      </div>
+    </div>
+  </div>
+
+  <div id="settingsMenu" class="overlay hidden">
+    <div class="panel">
+      <h2>Inställningar</h2>
+
+      <label for="qualitySelect">Grafiknivå</label>
+      <select id="qualitySelect">
+        <option value="low">Låg</option>
+        <option value="medium">Medium</option>
+        <option value="high">Hög</option>
+        <option value="ultra">Ultra</option>
+      </select>
+
+      <button id="settingsSave">Spara</button>
+      <button id="settingsClose">Stäng</button>
+    </div>
+  </div>
+
+  <div id="pauseMenu" class="overlay hidden">
+    <div class="panel">
+      <h2>Paus</h2>
+      <button id="resumeBtn">Fortsätt</button>
+      <button id="pauseSettingsBtn">Inställningar</button>
+      <button id="saveBtn">Spara</button>
+      <button id="quitBtn">Till huvudmenyn</button>
+    </div>
+  </div>
+
+  <div id="hud" class="hidden">
+    <div id="topLeft">
+      <div class="stat">💰 <span id="money">0</span></div>
+      <div class="stat">
+        ❤
+        <span style="display:inline-block; vertical-align:middle;">
+          <span id="healthBar"><span id="healthFill"></span></span>
+        </span>
+      </div>
+      <div class="stat">🚨 <span id="wanted">-</span></div>
+    </div>
+
+    <div id="minimapWrap" class="stat">
+      <canvas id="minimap" width="180" height="180"></canvas>
+    </div>
+
+    <div id="bottomLeft" class="stat">
+      <span id="modeLabel">Till fots</span> |
+      <span id="speed">0</span> km/h |
+      Pos <span id="pos">0, 0</span>
+    </div>
+  </div>
+
+  <div id="controlsHint" class="hidden">
+    W A S D rörelse/körning • Shift spring • Space hopp • E gå in i fordon • F lämna fordon • Esc paus
+  </div>
+
+  <div id="message" class="hidden"></div>
+
+  <script type="module">
+    import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
+
+    const $ = (id) => document.getElementById(id);
+
+    // ---------- State ----------
+    let renderer = null;
+    let scene = null;
+    let camera = null;
+    let clock = null;
+    let sun = null;
+
+    let initialized = false;
+    let gameStarted = false;
+    let paused = false;
+
+    let player = null;
+    let playerVelocityY = 0;
+    let playerOnGround = true;
+
+    let cameraYaw = 0;
+    let cameraPitch = 0.24;
+
+    const keys = {};
+    const colliders = [];
+    const roadsData = [];
+    const vehicles = [];
+    const npcs = [];
+    const policeUnits = [];
+
+    const bounds = 470;
+    const carBoundsX = 295;
+
+    const arrestState = { timer: 0 };
+    const policeSpawn = { last: 0 };
+
+    let lastCrimeTime = -999;
+    let lastWantedDecay = 0;
+    let lastSave = 0;
+    let messageTimeout = null;
+
+    function loadSettings() {
+      try {
+        return {
+          quality: "medium",
+          ...JSON.parse(localStorage.getItem("minicity.settings") || "{}")
+        };
+      } catch {
+        return { quality: "medium" };
+      }
+    }
+
+    function loadSave() {
+      try {
+        return JSON.parse(localStorage.getItem("minicity.save") || "{}");
+      } catch {
+        return {};
+      }
+    }
+
+    const settings = loadSettings();
+    const saveData = loadSave();
+
+    const state = {
+      money: Number.isFinite(saveData.money) ? saveData.money : 5000,
+      health: Number.isFinite(saveData.health) ? saveData.health : 100,
+      wanted: 0,
+      inVehicle: null
+    };
+
+    // ---------- UI helpers ----------
+    function showMessage(text, ms = 2600) {
+      const el = $("message");
+      if (!el) return;
+      el.textContent = text;
+      el.classList.remove("hidden");
+      clearTimeout(messageTimeout);
+      messageTimeout = setTimeout(() => el.classList.add("hidden"), ms);
+    }
+
+    function saveSettings() {
+      localStorage.setItem("minicity.settings", JSON.stringify(settings));
+    }
+
+    function saveGame() {
+      if (!initialized) return;
+      const pos = state.inVehicle ? state.inVehicle.group.position : player.position;
+      localStorage.setItem("minicity.save", JSON.stringify({
+        money: state.money,
+        health: state.health,
+        position: [pos.x, 0, pos.z],
+        savedAt: new Date().toISOString()
+      }));
+    }
+
+    function requestPointerLock() {
+      if (!renderer) return;
+      const maybePromise = renderer.domElement.requestPointerLock();
+      if (maybePromise?.catch) {
+        maybePromise.catch(() => showMessage("Kunde inte låsa musen. Klicka i spelvyn."));
+      }
+    }
+
+    // ---------- Game flow ----------
+    function startGame() {
+      if (!initialized) initGame();
+
+      gameStarted = true;
+      paused = false;
+
+      $("menu").classList.add("hidden");
+      $("hud").classList.remove("hidden");
+      $("controlsHint").classList.remove("hidden");
+      $("pauseMenu").classList.add("hidden");
+
+      requestPointerLock();
+      showMessage("Välkommen till MINI CITY. Hitta en bil, gå nära den och tryck E.", 4200);
+    }
+
+    function openPause() {
+      if (!gameStarted || paused) return;
+      paused = true;
+      $("pauseMenu").classList.remove("hidden");
+      document.exitPointerLock?.();
+    }
+
+    function resumeGame() {
+      if (!gameStarted) return;
+      paused = false;
+      $("pauseMenu").classList.add("hidden");
+      $("settingsMenu").classList.add("hidden");
+      requestPointerLock();
+    }
+
+    function quitToMenu() {
+      saveGame();
+      gameStarted = false;
+      paused = false;
+
+      document.exitPointerLock?.();
+
+      $("pauseMenu").classList.add("hidden");
+      $("settingsMenu").classList.add("hidden");
+      $("hud").classList.add("hidden");
+      $("controlsHint").classList.add("hidden");
+      $("menu").classList.remove("hidden");
+    }
+
+    // ---------- Init ----------
+    function initGame() {
+      if (initialized) return;
+
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      $("app").appendChild(renderer.domElement);
+
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x86b8e8);
+      scene.fog = new THREE.Fog(0x86b8e8, 180, 900);
+
+      camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 2000);
+
+      clock = new THREE.Clock();
+
+      createLights();
+      createWorld();
+      createPlayer();
+      createVehicles();
+      createNPCs();
+      setupInput();
+      bindUI();
+
+      window.addEventListener("resize", onResize);
+      window.addEventListener("beforeunload", saveGame);
+
+      applyQuality();
+      initialized = true;
+      animate();
+    }
+
+    function onResize() {
+      if (!camera || !renderer) return;
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    function applyQuality() {
+      if (!renderer) return;
+
+      const q = settings.quality;
+
+      renderer.setPixelRatio(
+        q === "low" ? 0.75 :
+        q === "medium" ? 1 :
+        q === "high" ? Math.min(window.devicePixelRatio, 1.5) :
+        Math.min(window.devicePixelRatio, 2)
+      );
+
+      renderer.shadowMap.enabled = q !== "low";
+
+      if (sun) {
+        sun.castShadow = q === "high" || q === "ultra";
+        const size = q === "ultra" ? 2048 : 1024;
+        sun.shadow.mapSize.set(size, size);
+        if (sun.shadow.map) {
+          sun.shadow.map.dispose();
+          sun.shadow.map = null;
+        }
+      }
+    }
+
+    // ---------- World ----------
+    function makeFacadeTexture(baseColor, litWindowColor) {
+      const canvas = document.createElement("canvas");
+      canvas.width = 64;
+      canvas.height = 128;
+      const ctx = canvas.getContext("2d");
+
+      ctx.fillStyle = baseColor;
+      ctx.fillRect(0, 0, 64, 128);
+
+      for (let y = 8; y < 120; y += 14) {
+        for (let x = 8; x < 56; x += 14) {
+          ctx.fillStyle = Math.random() > 0.42 ? litWindowColor : "#0b0f14";
+          ctx.fillRect(x, y, 7, 9);
+        }
+      }
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      return texture;
+    }
+
+    function createLights() {
+      const hemi = new THREE.HemisphereLight(0xcfe5ff, 0x44524a, 0.95);
+      scene.add(hemi);
+
+      sun = new THREE.DirectionalLight(0xfff1d6, 1.55);
+      sun.position.set(140, 190, 70);
+      sun.castShadow = true;
+      sun.shadow.mapSize.set(1024, 1024);
+      sun.shadow.camera.left = -320;
+      sun.shadow.camera.right = 320;
+      sun.shadow.camera.top = 320;
+      sun.shadow.camera.bottom = -320;
+      sun.shadow.camera.far = 800;
+      scene.add(sun);
+    }
+
+    function createWorld() {
+      const groundMat = new THREE.MeshStandardMaterial({ color: 0x44523f, roughness: 1 });
+      const ground = new THREE.Mesh(new THREE.PlaneGeometry(1500, 1500), groundMat);
+      ground.rotation.x = -Math.PI / 2;
+      ground.receiveShadow = true;
+      scene.add(ground);
+
+      const waterMat = new THREE.MeshStandardMaterial({
+        color: 0x1f6f9f,
+        transparent: true,
+        opacity: 0.9,
+        roughness: 0.18,
+        metalness: 0.12
+      });
+      const water = new THREE.Mesh(new THREE.PlaneGeometry(360, 1500), waterMat);
+      water.rotation.x = -Math.PI / 2;
+      water.position.set(465, 0.05, 0);
+      scene.add(water);
+
+      const roadMat = new THREE.MeshStandardMaterial({ color: 0x23262b, roughness: 0.96 });
+
+      function addRoad(x, z, w, d) {
+        const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, d), roadMat);
+        mesh.rotation.x = -Math.PI / 2;
+        mesh.position.set(x, 0.02, z);
+        mesh.receiveShadow = true;
+        scene.add(mesh);
+        roadsData.push({ x, z, w, d });
+      }
+
+      const roadPositions = [-240, -160, -80, 0, 80, 160, 240];
+      for (const p of roadPositions) {
+        addRoad(0, p, 1000, 14);
+        addRoad(p, 0, 14, 1000);
+      }
+
+      const facadeTextures = [
+        makeFacadeTexture("#4d5a68", "#ffd97a"),
+        makeFacadeTexture("#6b594d", "#ffe9b3"),
+        makeFacadeTexture("#39465a", "#9fd0ff"),
+        makeFacadeTexture("#5b6361", "#ffd97a"),
+        makeFacadeTexture("#73605a", "#ffcc66")
+      ];
+
+      function addBuilding(x, z, w, d, h, texture) {
+        const material = new THREE.MeshStandardMaterial({ map: texture, roughness: 0.82 });
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
+        mesh.position.set(x, h / 2, z);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        scene.add(mesh);
+
+        colliders.push({
+          minX: x - w / 2,
+          maxX: x + w / 2,
+          minZ: z - d / 2,
+          maxZ: z + d / 2
+        });
+      }
+
+      // City blocks between roads.
+      for (let ix = -3; ix <= 2; ix++) {
+        for (let iz = -3; iz <= 2; iz++) {
+          const cx = ix * 80 + 40;
+          const cz = iz * 80 + 40;
+
+          if (cx > 230) continue;
+
+          const count = Math.random() > 0.45 ? 2 : 1;
+
+          for (let i = 0; i < count; i++) {
+            const w = THREE.MathUtils.randFloat(14, 30);
+            const d = THREE.MathUtils.randFloat(14, 30);
+            const h = THREE.MathUtils.randFloat(10, 68);
+
+            const x = THREE.MathUtils.clamp(cx + THREE.MathUtils.randFloat(-8, 8), cx - 18, cx + 18);
+            const z = THREE.MathUtils.clamp(cz + THREE.MathUtils.randFloat(-8, 8), cz - 18, cz + 18);
+
+            const texture = facadeTextures[Math.floor(Math.random() * facadeTextures.length)];
+            addBuilding(x, z, w, d, h, texture);
+          }
+        }
+      }
+
+      // Harbor piers, visual only.
+      const pierMat = new THREE.MeshStandardMaterial({ color: 0x7b5b3a, roughness: 0.95 });
+      for (let i = 0; i < 3; i++) {
+        const pier = new THREE.Mesh(new THREE.BoxGeometry(34, 1, 9), pierMat);
+        pier.position.set(300, 0.5, -80 + i * 80);
+        pier.castShadow = true;
+        pier.receiveShadow = true;
+        scene.add(pier);
+      }
+
+      // Bridge-inspired landmark, visual only.
+      const bridgeMat = new THREE.MeshStandardMaterial({ color: 0xb03a2e, roughness: 0.55, metalness: 0.25 });
+
+      const deck = new THREE.Mesh(new THREE.BoxGeometry(230, 2, 18), bridgeMat);
+      deck.position.set(385, 10, 0);
+      scene.add(deck);
+
+      for (const towerX of [325, 445]) {
+        const tower = new THREE.Mesh(new THREE.BoxGeometry(6, 54, 6), bridgeMat);
+        tower.position.set(towerX, 27, 0);
+        scene.add(tower);
+      }
+
+      // Hills outside city, visual only.
+      const hillMat = new THREE.MeshStandardMaterial({ color: 0x4d624b, flatShading: true });
+      for (let i = 0; i < 7; i++) {
+        const radius = 55 + Math.random() * 55;
+        const height = 35 + Math.random() * 55;
+        const hill = new THREE.Mesh(new THREE.ConeGeometry(radius, height, 7), hillMat);
+        hill.position.set(-430 - Math.random() * 60, height / 2 - 2, -280 + i * 95);
+        scene.add(hill);
+      }
+    }
+
+    // ---------- Collision ----------
+    function pointInCollider(x, z, radius = 0.5) {
+      for (const b of colliders) {
+        if (
+          x > b.minX - radius &&
+          x < b.maxX + radius &&
+          z > b.minZ - radius &&
+          z < b.maxZ + radius
+        ) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function resolveCircleAABBs(pos, radius) {
+      let collided = false;
+
+      for (const b of colliders) {
+        if (
+          pos.x < b.minX - radius ||
+          pos.x > b.maxX + radius ||
+          pos.z < b.minZ - radius ||
+          pos.z > b.maxZ + radius
+        ) {
+          continue;
+        }
+
+        const left = pos.x - (b.minX - radius);
+        const right = (b.maxX + radius) - pos.x;
+        const back = pos.z - (b.minZ - radius);
+        const front = (b.maxZ + radius) - pos.z;
+
+        const minPen = Math.min(left, right, back, front);
+
+        if (minPen > 0) {
+          collided = true;
+
+          if (minPen === left) pos.x = b.minX - radius;
+          else if (minPen === right) pos.x = b.maxX + radius;
+          else if (minPen === back) pos.z = b.minZ - radius;
+          else pos.z = b.maxZ + radius;
+        }
+      }
+
+      return collided;
+    }
+
+    function moveWithCollision(pos, delta, radius, maxX = bounds) {
+      let collided = false;
+
+      pos.x += delta.x;
+      if (resolveCircleAABBs(pos, radius)) collided = true;
+
+      pos.z += delta.z;
+      if (resolveCircleAABBs(pos, radius)) collided = true;
+
+      if (pos.x < -bounds + radius) { pos.x = -bounds + radius; collided = true; }
+      if (pos.x > maxX - radius) { pos.x = maxX - radius; collided = true; }
+      if (pos.z < -bounds + radius) { pos.z = -bounds + radius; collided = true; }
+      if (pos.z > bounds - radius) { pos.z = bounds - radius; collided = true; }
+
+      return collided;
+    }
+
+    function randomOpenPoint() {
+      for (let i = 0; i < 30; i++) {
+        const x = THREE.MathUtils.randFloat(-260, 260);
+        const z = THREE.MathUtils.randFloat(-260, 260);
+
+        if (x > 250) continue;
+        if (!pointInCollider(x, z, 1.0)) return new THREE.Vector3(x, 0, z);
+      }
+      return new THREE.Vector3(0, 0, 20);
+    }
+
+    function randomRoadPoint(minX = -260, maxX = 250) {
+      for (let i = 0; i < 30; i++) {
+        const road = roadsData[Math.floor(Math.random() * roadsData.length)];
+        const lateral = THREE.MathUtils.randFloat(-4, 4);
+        const along = THREE.MathUtils.randFloat(minX, maxX);
+
+        let x, z;
+        if (road.w > road.d) {
+          x = along;
+          z = road.z + lateral;
+        } else {
+          x = road.x + lateral;
+          z = along;
+        }
+
+        if (!pointInCollider(x, z, 1.5)) return new THREE.Vector3(x, 0, z);
+      }
+      return new THREE.Vector3(0, 3.5, 0);
+    }
+
+    // ---------- Player ----------
+    function createPlayer() {
+      player = new THREE.Group();
+
+      const bodyMat = new THREE.MeshStandardMaterial({ color: 0x2f7bff, roughness: 0.55 });
+      const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.36, 1.05, 8, 16), bodyMat);
+      body.position.y = 1.05;
+      body.castShadow = true;
+      player.add(body);
+
+      const noseMat = new THREE.MeshStandardMaterial({ color: 0xffd166 });
+      const nose = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.55, 10), noseMat);
+      nose.rotation.x = Math.PI / 2;
+      nose.position.set(0, 1.45, 0.52);
+      player.add(nose);
+
+      const saved = saveData.position;
+      if (Array.isArray(saved) && saved.length >= 3) {
+        player.position.set(saved[0], 0, saved[2]);
+      } else {
+        player.position.set(0, 0, 20);
+      }
+
+      resolveCircleAABBs(player.position, 0.5);
+      scene.add(player);
+    }
+
+    function updatePlayer(dt) {
+      const forward = new THREE.Vector3(-Math.sin(cameraYaw), 0, -Math.cos(cameraYaw));
+      const right = new THREE.Vector3(-forward.z, 0, forward.x);
+
+      const move = new THREE.Vector3();
+
+      if (keys["KeyW"]) move.add(forward);
+      if (keys["KeyS"]) move.sub(forward);
+      if (keys["KeyD"]) move.add(right);
+      if (keys["KeyA"]) move.sub(right);
+
+      const speed = keys["ShiftLeft"] || keys["ShiftRight"] ? 8.2 : 4.2;
+
+      if (move.lengthSq() > 0) {
+        move.normalize();
+        player.rotation.y = Math.atan2(move.x, move.z);
+      }
+
+      const delta = move.multiplyScalar(speed * dt);
+      moveWithCollision(player.position, delta, 0.5);
+
+      playerVelocityY -= 25 * dt;
+
+      if (keys["Space"] && playerOnGround) {
+        playerVelocityY = 8.2;
+        playerOnGround = false;
+      }
+
+      player.position.y += playerVelocityY * dt;
+
+      if (player.position.y <= 0) {
+        player.position.y = 0;
+        playerVelocityY = 0;
+        playerOnGround = true;
+      }
+    }
+
+    // ---------- Vehicles ----------
+    function makeCarMesh(color, police = false) {
+      const group = new THREE.Group();
+
+      const paint = new THREE.MeshStandardMaterial({
+        color,
+        metalness: 0.62,
+        roughness: 0.32
+      });
+
+      const chassis = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.72, 4.5), paint);
+      chassis.position.y = 0.72;
+      chassis.castShadow = true;
+      group.add(chassis);
+
+      const cabin = new THREE.Mesh(
+        new THREE.BoxGeometry(1.72, 0.58, 2.05),
+        new THREE.MeshStandardMaterial({ color: 0x111827, metalness: 0.15, roughness: 0.2 })
+      );
+      cabin.position.set(0, 1.28, -0.28);
+      cabin.castShadow = true;
+      group.add(cabin);
+
+      const hood = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.16, 1.15), paint);
+      hood.position.set(0, 1.02, 1.6);
+      group.add(hood);
+
+      const lightMat = new THREE.MeshStandardMaterial({
+        color: 0xfff6d8,
+        emissive: 0xfff1b8,
+        emissiveIntensity: 0.7
+      });
+      for (const sx of [-0.68, 0.68]) {
+        const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.16, 0.1), lightMat);
+        lamp.position.set(sx, 0.78, 2.26);
+        group.add(lamp);
+      }
+
+      const wheelGeo = new THREE.CylinderGeometry(0.38, 0.38, 0.26, 14);
+      wheelGeo.rotateZ(Math.PI / 2);
+
+      const tyreMat = new THREE.MeshStandardMaterial({ color: 0x15181c, roughness: 0.9 });
+      const rimMat = new THREE.MeshStandardMaterial({ color: 0xb9c2cc, metalness: 0.75, roughness: 0.3 });
+
+      const wheelSpins = [];
+      const wheelSteers = [];
+
+      for (const [wx, wz] of [[-0.98, 1.5], [0.98, 1.5], [-0.98, -1.5], [0.98, -1.5]]) {
+        const hub = new THREE.Group();
+        hub.position.set(wx, 0.38, wz);
+        group.add(hub);
+
+        const tyre = new THREE.Mesh(wheelGeo, tyreMat);
+        tyre.castShadow = true;
+        hub.add(tyre);
+
+        const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.28, 10), rimMat);
+        rim.rotation.z = Math.PI / 2;
+        hub.add(rim);
+
+        wheelSpins.push([tyre, rim]);
+
+        if (wz > 0) wheelSteers.push(hub);
+      }
+
+      let beacons = null;
+      if (police) {
+        const stripe = new THREE.Mesh(
+          new THREE.BoxGeometry(2.12, 0.24, 4.52),
+          new THREE.MeshStandardMaterial({ color: 0x10131a, roughness: 0.6 })
+        );
+        stripe.position.y = 0.5;
+        group.add(stripe);
+
+        const redMat = new THREE.MeshStandardMaterial({
+          color: 0xff2d2d, emissive: 0xff2020, emissiveIntensity: 0.2
+        });
+        const blueMat = new THREE.MeshStandardMaterial({
+          color: 0x2d6bff, emissive: 0x2050ff, emissiveIntensity: 0.2
+        });
+
+        const red = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.14, 0.34), redMat);
+        red.position.set(-0.3, 1.64, -0.28);
+        group.add(red);
+
+        const blue = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.14, 0.34), blueMat);
+        blue.position.set(0.3, 1.64, -0.28);
+        group.add(blue);
+
+        beacons = { red: redMat, blue: blueMat };
+      }
+
+      return { group, wheelSpins, wheelSteers, beacons };
+    }
+
+    function spawnVehicle(color, position, police = false) {
+      const mesh = makeCarMesh(color, police);
+      mesh.group.position.copy(position);
+      mesh.group.rotation.y = Math.random() * Math.PI * 2;
+      scene.add(mesh.group);
+
+      const vehicle = {
+        group: mesh.group,
+        wheelSpins: mesh.wheelSpins,
+        wheelSteers: mesh.wheelSteers,
+        beacons: mesh.beacons,
+        police,
+        speed: 0
+      };
+
+      vehicles.push(vehicle);
+      if (police) policeUnits.push(vehicle);
+
+      return vehicle;
+    }
+
+    function createVehicles() {
+      const colors = [0xd94f3d, 0x3d7bd9, 0xe8c33d, 0x59d97b, 0xd93db8, 0x555f6b];
+
+      for (let i = 0; i < 14; i++) {
+        spawnVehicle(colors[i % colors.length], randomRoadPoint());
+      }
+    }
+
+    function driveVehicle(v, dt, throttle, brake, steerInput, maxSpeed) {
+      if (throttle > 0) {
+        v.speed += 14 * dt;
+      } else if (brake > 0) {
+        if (v.speed > 0.4) v.speed -= 28 * dt;
+        else v.speed = Math.max(v.speed - 8 * dt, -9);
+      } else {
+        v.speed *= Math.max(0, 1 - 1.1 * dt);
+        if (Math.abs(v.speed) < 0.05) v.speed = 0;
+      }
+
+      v.speed = THREE.MathUtils.clamp(v.speed, -9, maxSpeed);
+
+      const steerAuthority = Math.min(Math.abs(v.speed) / 8, 1);
+      const direction = v.speed >= 0 ? 1 : -1;
+      v.group.rotation.y += steerInput * 1.7 * dt * steerAuthority * direction;
+
+      const forward = new THREE.Vector3(
+        Math.sin(v.group.rotation.y), 0, Math.cos(v.group.rotation.y)
+      );
+      const prevSpeed = v.speed;
+      const delta = forward.clone().multiplyScalar(v.speed * dt);
+
+      const collided = moveWithCollision(v.group.position, delta, 1.5, carBoundsX);
+
+      if (collided) {
+        if (Math.abs(prevSpeed) > 16) {
+          state.health = Math.max(0, state.health - 5);
+          if (state.health <= 0) hospitalTransfer();
+          else showMessage("Du krockade! 💥", 1500);
+        }
+        v.speed = prevSpeed * -0.3;
+      }
+
+      for (const [tyre, rim] of v.wheelSpins) {
+        tyre.rotation.x += v.speed * dt * 2.6;
+        rim.rotation.x = tyre.rotation.x;
+      }
+      for (const hub of v.wheelSteers) {
+        hub.rotation.y = steerInput * 0.42;
+      }
+
+      if (state.inVehicle === v) hitNPCsWithVehicle(v);
+    }
+
+    function hospitalTransfer() {
+      if (state.inVehicle) {
+        state.inVehicle.speed = 0;
+        state.inVehicle = null;
+      }
+      player.visible = true;
+      player.position.set(0, 0, 20);
+      resolveCircleAABBs(player.position, 0.5);
+      state.health = 100;
+      state.money = Math.max(0, state.money - 500);
+      clearWanted(false);
+      showMessage("Du vaknar på sjukhuset. Vårdkostnad: 500 kr.", 4200);
+    }
+
+    function updateDriving(dt) {
+      const v = state.inVehicle;
+      if (!v) return;
+
+      const throttle = keys["KeyW"] ? 1 : 0;
+      const brake = keys["KeyS"] ? 1 : 0;
+      const steerInput = (keys["KeyA"] ? 1 : 0) - (keys["KeyD"] ? 1 : 0);
+
+      driveVehicle(v, dt, throttle, brake, steerInput, v.police ? 34 : 26);
+    }
+
+    function tryEnterNearestVehicle() {
+      let best = null;
+      let bestDist = 4.2;
+
+      for (const v of vehicles) {
+        const d = v.group.position.distanceTo(player.position);
+        if (d < bestDist) {
+          best = v;
+          bestDist = d;
+        }
+      }
+
+      if (!best) {
+        showMessage("Ingen bil i närheten. Gå närmare en bil och tryck E.");
+        return;
+      }
+
+      state.inVehicle = best;
+      player.visible = false;
+      showMessage(
+        best.police ? "Du kör en polisbil. 🚓" : "Du kör nu. W/S gas/broms, A/D styr, F lämna.",
+        3200
+      );
+    }
+
+    function exitVehicle() {
+      const v = state.inVehicle;
+      if (!v) return;
+
+      if (Math.abs(v.speed) > 6) {
+        showMessage("Sakta ner bilen innan du stiger ur.");
+        return;
+      }
+
+      v.speed = 0;
+      const side = new THREE.Vector3(
+        Math.cos(v.group.rotation.y), 0, -Math.sin(v.group.rotation.y)
+      ).multiplyScalar(2.4);
+
+      player.position.copy(v.group.position).add(side);
+      player.position.y = 0;
+      resolveCircleAABBs(player.position, 0.5);
+      player.visible = true;
+      state.inVehicle = null;
+    }
+
+    // ---------- NPCs ----------
+    function makeHumanMesh(shirtColor) {
+      const group = new THREE.Group();
+
+      const body = new THREE.Mesh(
+        new THREE.CapsuleGeometry(0.3, 0.95, 6, 12),
+        new THREE.MeshStandardMaterial({ color: shirtColor, roughness: 0.85 })
+      );
+      body.position.y = 0.95;
+      body.castShadow = true;
+      group.add(body);
+
+      const head = new THREE.Mesh(
+        new THREE.SphereGeometry(0.2, 12, 10),
+        new THREE.MeshStandardMaterial({ color: 0xd8a077, roughness: 0.7 })
+      );
+      head.position.y = 1.72;
+      head.castShadow = true;
+      group.add(head);
+
+      return group;
+    }
+
+    function createNPCs() {
+      const shirts = [0xd94f3d, 0xe8c33d, 0x3d7bd9, 0x59d97b, 0xb06ad9, 0xe07a5f, 0x81b29a];
+
+      for (let i = 0; i < 26; i++) {
+        const group = makeHumanMesh(shirts[i % shirts.length]);
+        group.position.copy(randomOpenPoint());
+        group.rotation.y = Math.random() * Math.PI * 2;
+        scene.add(group);
+
+        npcs.push({
+          group,
+          knocked: false,
+          speed: THREE.MathUtils.randFloat(1.1, 1.9),
+          waypoint: randomOpenPoint(),
+          nextRepath: 0
+        });
+      }
+    }
+
+    function updateNPCs(dt, elapsed) {
+      for (const npc of npcs) {
+        if (npc.knocked) continue;
+
+        const pos = npc.group.position;
+        const dist = npc.waypoint.distanceTo(pos);
+
+        if (dist < 1.4 || elapsed > npc.nextRepath) {
+          npc.waypoint = randomOpenPoint();
+          npc.nextRepath = elapsed + THREE.MathUtils.randFloat(8, 22);
+          continue;
+        }
+
+        const dir = npc.waypoint.clone().sub(pos).setY(0).normalize();
+        npc.group.rotation.y = Math.atan2(dir.x, dir.z);
+
+        const step = dir.multiplyScalar(npc.speed * dt);
+        pos.add(step);
+
+        if (pointInCollider(pos.x, pos.z, 0.6)) {
+          pos.sub(step);
+          npc.waypoint = randomOpenPoint();
+        }
+
+        pos.x = THREE.MathUtils.clamp(pos.x, -260, 260);
+        pos.z = THREE.MathUtils.clamp(pos.z, -260, 260);
+      }
+    }
+
+    function hitNPCsWithVehicle(v) {
+      if (Math.abs(v.speed) < 5) return;
+
+      const forward = new THREE.Vector3(
+        Math.sin(v.group.rotation.y), 0, Math.cos(v.group.rotation.y)
+      );
+      const front = v.group.position.clone().addScaledVector(forward, 2.2);
+
+      for (const npc of npcs) {
+        if (npc.knocked) continue;
+        if (npc.group.position.distanceTo(front) > 1.5) continue;
+
+        npc.knocked = true;
+        npc.group.rotation.x = Math.PI / 2;
+        npc.group.position.y = 0.32;
+        v.speed *= 0.55;
+
+        reportCrime("Du påkörde en fotgängare! Ett vittne larmade polisen.");
+        return;
+      }
+    }
+
+    // ---------- Police & wanted ----------
+    function reportCrime(reason) {
+      state.wanted = Math.min(5, state.wanted + 1);
+      lastCrimeTime = clock.elapsedTime;
+      showMessage(`${reason} Wanted-nivå: ${"★".repeat(state.wanted)}`, 3400);
+    }
+
+    function clearWanted(showMsg = true) {
+      for (const unit of [...policeUnits]) {
+        scene.remove(unit.group);
+        const vi = vehicles.indexOf(unit);
+        if (vi >= 0) vehicles.splice(vi, 1);
+      }
+      policeUnits.length = 0;
+
+      if (state.wanted > 0 && showMsg) {
+        showMessage("Polisen har gett upp jakten. 🚨 borta");
+      }
+      state.wanted = 0;
+      arrestState.timer = 0;
+    }
+
+    function busted() {
+      const fine = 250 * Math.max(1, state.wanted);
+      state.money = Math.max(0, state.money - fine);
+
+      if (state.inVehicle) {
+        state.inVehicle.speed = 0;
+        state.inVehicle = null;
+      }
+      player.visible = true;
+      player.position.set(0, 0, 20);
+      resolveCircleAABBs(player.position, 0.5);
+
+      clearWanted(false);
+      saveGame();
+      showMessage(`Gripen! 👮 Du förlorade ${fine} kr i böter.`, 4500);
+    }
+
+    function updatePoliceForces(dt, elapsed) {
+      const targetPos = state.inVehicle
+        ? state.inVehicle.group.position
+        : player.position;
+
+      if (state.wanted > 0 && policeUnits.length < Math.min(2 + state.wanted, 6)) {
+        if (elapsed - policeSpawn.last > 2.5) {
+          const point = randomRoadPoint(-240, 220);
+          if (point.distanceTo(targetPos) > 60) {
+            spawnVehicle(0x1c2a4a, point, true);
+            policeSpawn.last = elapsed;
+          }
+        }
+      }
+
+      for (const unit of [...policeUnits]) {
+        if (state.inVehicle === unit) continue;
+
+        const pos = unit.group.position;
+        const diff = targetPos.clone().sub(pos).setY(0);
+        const dist = diff.length();
+
+        if (state.wanted === 0) {
+          driveVehicle(unit, dt, 0, 1, 0, 30);
+          continue;
+        }
+
+        const desired = Math.atan2(diff.x, diff.z);
+        let angleDiff = desired - unit.group.rotation.y;
+        while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+        while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+
+        const steerInput = THREE.MathUtils.clamp(angleDiff * 1.4, -1, 1);
+        const throttle = Math.abs(angleDiff) < 1.0 && dist > 6 ? 1 : 0;
+        const brake = dist < 5 ? 1 : 0;
+
+        driveVehicle(unit, dt, throttle, brake, steerInput, 32);
+
+        const phase = Math.floor(elapsed * 4) % 2 === 0;
+        unit.beacons.red.emissiveIntensity = phase ? 2.2 : 0.15;
+        unit.beacons.blue.emissiveIntensity = phase ? 0.15 : 2.2;
+
+        if (dist < 3.4 && !state.inVehicle && Math.abs(unit.speed) < 3) {
+          arrestState.timer += dt;
+          if (arrestState.timer > 1.2) busted();
+        } else if (arrestState.timer > 0) {
+          arrestState.timer = Math.max(0, arrestState.timer - dt);
+        }
+      }
+    }
+
+    function updateWanted(elapsed) {
+      if (state.wanted === 0) return;
+
+      if (elapsed - lastCrimeTime > 16 && elapsed - lastWantedDecay > 8) {
+        state.wanted -= 1;
+        lastWantedDecay = elapsed;
+        if (state.wanted === 0) {
+          clearWanted(false);
+          showMessage("Du har flytt polisen. Wanted-nivå: 0.");
+        }
+      }
+    }
+
+    // ---------- Camera ----------
+    function updateCamera() {
+      const inCar = Boolean(state.inVehicle);
+      const targetObj = inCar ? state.inVehicle.group : player;
+      const targetPos = new THREE.Vector3(
+        targetObj.position.x,
+        inCar ? 1.5 : 1.4,
+        targetObj.position.z
+      );
+
+      const dist = inCar ? 9.5 : 5.5;
+      const dir = new THREE.Vector3(
+        Math.sin(cameraYaw) * Math.cos(cameraPitch),
+        Math.sin(cameraPitch),
+        Math.cos(cameraYaw) * Math.cos(cameraPitch)
+      );
+
+      camera.position.copy(targetPos).addScaledVector(dir, dist);
+      camera.position.y = Math.max(camera.position.y, 0.6);
+      camera.lookAt(targetPos);
+    }
+
+    // ---------- HUD & minimap ----------
+    const minimapCtx = $("minimap").getContext("2d");
+
+    function drawMinimap() {
+      const ctx = minimapCtx;
+      const size = 180;
+      const world = 1000;
+      const scale = size / world;
+      const toMap = (x, z) => [(x + world / 2) * scale, (z + world / 2) * scale];
+
+      ctx.fillStyle = "#22301f";
+      ctx.fillRect(0, 0, size, size);
+
+      ctx.fillStyle = "#1f6f9f";
+      const [wx] = toMap(285, 0);
+      ctx.fillRect(wx, 0, size - wx, size);
+
+      ctx.fillStyle = "#3a3f47";
+      for (const r of roadsData) {
+        const [rx, rz] = toMap(r.x - r.w / 2, r.z - r.d / 2);
+        ctx.fillRect(rx, rz, r.w * scale, r.d * scale);
+      }
+
+      ctx.fillStyle = "#101820";
+      for (const b of colliders) {
+        const [bx, bz] = toMap(b.minX, b.minZ);
+        ctx.fillRect(bx, bz, (b.maxX - b.minX) * scale, (b.maxZ - b.minZ) * scale);
+      }
+
+      for (const npc of npcs) {
+        if (npc.knocked) continue;
+        const [nx, nz] = toMap(npc.group.position.x, npc.group.position.z);
+        ctx.fillStyle = "#e8e2d0";
+        ctx.fillRect(nx - 1, nz - 1, 2, 2);
+      }
+
+      for (const v of vehicles) {
+        const [vx, vz] = toMap(v.group.position.x, v.group.position.z);
+        ctx.fillStyle = v.police ? "#ff5f5f" : "#6fd0ff";
+        ctx.beginPath();
+        ctx.arc(vx, vz, 2.4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      const pos = state.inVehicle ? state.inVehicle.group.position : player.position;
+      const [px, pz] = toMap(pos.x, pos.z);
+      const heading = state.inVehicle
+        ? state.inVehicle.group.rotation.y
+        : player.rotation.y;
+
+      ctx.save();
+      ctx.translate(px, pz);
+      ctx.rotate(-heading);
+      ctx.fillStyle = "#ffd166";
+      ctx.beginPath();
+      ctx.moveTo(0, 5);
+      ctx.lineTo(-3.6, -3.6);
+      ctx.lineTo(3.6, -3.6);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function updateHUD() {
+      $("money").textContent = state.money;
+      $("healthFill").style.width = `${state.health}%`;
+      $("wanted").textContent = state.wanted > 0 ? "★".repeat(state.wanted) : "-";
+
+      $("modeLabel").textContent = state.inVehicle ? "I fordon" : "Till fots";
+      $("speed").textContent = state.inVehicle
+        ? Math.round(Math.abs(state.inVehicle.speed) * 3.6)
+        : 0;
+
+      const pos = state.inVehicle ? state.inVehicle.group.position : player.position;
+      $("pos").textContent = `${Math.round(pos.x)}, ${Math.round(pos.z)}`;
+    }
+
+    // ---------- Input ----------
+    function setupInput() {
+      window.addEventListener("keydown", (e) => {
+        keys[e.code] = true;
+
+        if (e.code === "Space") e.preventDefault();
+
+        if (!gameStarted || paused) return;
+
+        if (e.code === "KeyE" && !state.inVehicle) tryEnterNearestVehicle();
+        if (e.code === "KeyF" && state.inVehicle) exitVehicle();
+      });
+
+      window.addEventListener("keyup", (e) => {
+        keys[e.code] = false;
+      });
+
+      renderer.domElement.addEventListener("click", () => {
+        if (gameStarted && !paused) requestPointerLock();
+      });
+
+      document.addEventListener("pointerlockchange", () => {
+        if (gameStarted && !paused && !document.pointerLockElement) openPause();
+      });
+
+      document.addEventListener("mousemove", (e) => {
+        if (document.pointerLockElement !== renderer.domElement) return;
+        cameraYaw -= e.movementX * 0.0024;
+        cameraPitch = THREE.MathUtils.clamp(cameraPitch + e.movementY * 0.0018, 0.02, 0.9);
+      });
+    }
+
+    function bindUI() {
+      $("btnSingle").addEventListener("click", startGame);
+      $("btnSettings").addEventListener("click", () =>
+        $("settingsMenu").classList.remove("hidden")
+      );
+      $("btnQuit").addEventListener("click", () => {
+        showMessage("Stäng webbläsarfliken för att avsluta spelet.", 4000);
+      });
+
+      $("qualitySelect").value = settings.quality;
+      $("settingsSave").addEventListener("click", () => {
+        settings.quality = $("qualitySelect").value;
+        saveSettings();
+        applyQuality();
+        $("settingsMenu").classList.add("hidden");
+        showMessage("Inställningar sparade.");
+      });
+      $("settingsClose").addEventListener("click", () =>
+        $("settingsMenu").classList.add("hidden")
+      );
+
+      $("resumeBtn").addEventListener("click", resumeGame);
+      $("pauseSettingsBtn").addEventListener("click", () =>
+        $("settingsMenu").classList.remove("hidden")
+      );
+      $("saveBtn").addEventListener("click", () => {
+        saveGame();
+        showMessage("Spelet sparat.");
+      });
+      $("quitBtn").addEventListener("click", quitToMenu);
+    }
+
+    // ---------- Loop ----------
+    function update(dt, elapsed) {
+      if (state.inVehicle) updateDriving(dt);
+      else updatePlayer(dt);
+
+      updateNPCs(dt, elapsed);
+      updatePoliceForces(dt, elapsed);
+      updateWanted(elapsed);
+      updateCamera();
+      updateHUD();
+      drawMinimap();
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const dt = Math.min(clock.getDelta(), 0.05);
+      const elapsed = clock.elapsedTime;
+
+      if (gameStarted && !paused) update(dt, elapsed);
+
+      renderer.render(scene, camera);
+    }
+  </script>
+</body>
+</html>
