@@ -569,7 +569,6 @@
       createVehicles();
       createNPCs();
       setupInput();
-      bindUI();
 
       window.addEventListener("resize", onResize);
       window.addEventListener("beforeunload", saveGame);
@@ -1674,6 +1673,8 @@
 
       renderer.render(scene, camera);
     }
+
+    bindUI();
   </script>
 </body>
 </html>
